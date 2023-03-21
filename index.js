@@ -17,6 +17,8 @@ import HttpsProxyAgent from "https-proxy-agent";
 // docker run -p 127.0.0.1:8979:7890 -e SUB_URL="..." ssr-subscription-to-proxy
 // docker run -p 127.0.0.1:8979:7890 -e SUB_URL="..." kevinwang15/sstp:latest
 
+const blacklistedServers = {};
+
 (async function main() {
     let serverToUse = null;
     let doLoopRunning = false;
@@ -45,7 +47,7 @@ import HttpsProxyAgent from "https-proxy-agent";
         console.log("parsing servers");
         const servers = serversData.map(parseServer).filter(x => x);
         servers.sort(() => Math.random() - 0.5);
-        serverToUse = servers.find(server => testTCPConnectivity(server.server, server.port));
+        serverToUse = servers.find(server => !blacklistedServers[server.server] && testTCPConnectivity(server.server, server.port));
         if (serverToUse == null) {
             throw "failed to find any server to use";
         }
@@ -67,6 +69,7 @@ import HttpsProxyAgent from "https-proxy-agent";
 
         if (!(await testActualConnectivity())) {
             console.log("testActualConnectivity failed, do loop again");
+            blacklistedServers[serverToUse.server] = true;
             await doLoop();
         }
     };
@@ -84,6 +87,7 @@ import HttpsProxyAgent from "https-proxy-agent";
 
         if (!testTCPConnectivity(serverToUse.server, serverToUse.port) || !(await testActualConnectivity())) {
             console.log("serverToUse died, do loop again");
+            blacklistedServers[serverToUse.server] = true;
             await doLoop();
         }
     }, 30 * 60 * 1000)
