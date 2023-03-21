@@ -10,6 +10,7 @@ import {
     testTCPConnectivity,
     writeConfigurationFile
 } from "./utils.js";
+import HttpsProxyAgent from "https-proxy-agent";
 
 // docker run -p 127.0.0.1:8979:7890 -e SUB_URL="..." kevinwang15/sstp:latest
 // docker buildx build --platform linux/amd64 . -t ssr-subscription-to-proxy
@@ -60,7 +61,14 @@ import {
         await configureClash(serverToUse);
         console.log("clash is configured");
 
+        await sleep(1000 * 2);
+
         doLoopRunning = false;
+
+        if (!(await testActualConnectivity())) {
+            console.log("testActualConnectivity failed, do loop again");
+            await doLoop();
+        }
     };
 
     await doLoop();
@@ -74,9 +82,32 @@ import {
 
         console.log("health checking server");
 
-        if (!testTCPConnectivity(serverToUse.server, serverToUse.port)) {
+        if (!testTCPConnectivity(serverToUse.server, serverToUse.port) || !(await testActualConnectivity())) {
             console.log("serverToUse died, do loop again");
             await doLoop();
         }
     }, 30 * 60 * 1000)
 })()
+
+
+async function testActualConnectivity() {
+    console.log("performing actual connectivity check through proxy");
+
+    const proxyAgent = new HttpsProxyAgent("http://127.0.0.1:7890");
+    const axiosInstance = axios.create({
+        httpsAgent: proxyAgent,
+        timeout: 1000 * 10,
+    });
+
+    try {
+        const response = await axiosInstance.get("https://www.google.com");
+        if (response.status === 200) {
+            console.log("testActualConnectivity is good");
+            return true;
+        }
+    } catch (e) {
+        console.log("testActualConnectivity failed", e);
+        return false;
+    }
+    return false;
+}
