@@ -75,7 +75,6 @@ const blacklistedServers = {};
     };
 
     await doLoop();
-    setInterval(doLoop, 1000 * 86400)
 
     // if serverToUse dies, doLoop again
     setInterval(async () => {
