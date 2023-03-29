@@ -89,7 +89,7 @@ const blacklistedServers = {};
             blacklistedServers[serverToUse.server] = true;
             await doLoop();
         }
-    }, 30 * 60 * 1000)
+    }, 3 * 60 * 1000)
 })()
 
 
