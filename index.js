@@ -12,6 +12,10 @@ import {
 } from "./utils.js";
 import HttpsProxyAgent from "https-proxy-agent";
 
+axios.defaults.validateStatus = function () {
+    return true;
+};
+
 // docker run -p 127.0.0.1:8979:7890 -e SUB_URL="..." kevinwang15/sstp:latest
 // docker buildx build --platform linux/amd64 . -t ssr-subscription-to-proxy
 // docker run -p 127.0.0.1:8979:7890 -e SUB_URL="..." ssr-subscription-to-proxy
@@ -103,8 +107,9 @@ async function testActualConnectivity() {
     });
 
     try {
-        const response = await axiosInstance.get("https://www.google.com");
-        if (response.status === 200) {
+        const url = process.env["CONNECTIVITY_CHECK_TARGET_URL"] || "https://www.google.com";
+        const response = await axiosInstance.get(url);
+        if (response.status >= 200) {
             console.log("testActualConnectivity is good");
             return true;
         }
