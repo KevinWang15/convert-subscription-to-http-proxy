@@ -10,11 +10,20 @@ import {
     testTCPConnectivity,
     writeConfigurationFile
 } from "./utils.js";
+import pino from 'pino';
+
+const logger = pino({
+    transport: {
+        target: 'pino-pretty'
+    },
+})
+
 import HttpsProxyAgent from "https-proxy-agent";
 
 axios.defaults.validateStatus = function () {
     return true;
 };
+
 
 // docker run -p 127.0.0.1:8979:7890 -e SUB_URL="..." kevinwang15/sstp:latest
 // docker buildx build --platform linux/amd64 . -t ssr-subscription-to-proxy
@@ -28,18 +37,18 @@ const blacklistedServers = {};
     let doLoopRunning = false;
     const doLoop = async () => {
         if (doLoopRunning) {
-            console.log("doLoop exited as another doLoop is running");
+            logger.info("doLoop exited as another doLoop is running");
             return;
         }
         doLoopRunning = true;
 
         const SUB_URL = process.env.SUB_URL;
         if (!SUB_URL) {
-            console.log("SUB_URL is not set");
+            logger.error("SUB_URL is not set");
             process.exit(1);
         }
 
-        console.log("starting a new loop");
+        logger.info("starting a new loop");
 
         let axiosResponse = await axios.get(SUB_URL);
         const serversData = decodeBase64(axiosResponse.data).split("\n").filter(x => x && x.trim());
@@ -48,31 +57,31 @@ const blacklistedServers = {};
 
         ensureDirectoryAndMmdb();
 
-        console.log("parsing servers");
+        logger.info("parsing servers");
         const servers = serversData.map(parseServer).filter(x => x);
         servers.sort(() => Math.random() - 0.5);
         serverToUse = servers.find(server => !blacklistedServers[server.server] && testTCPConnectivity(server.server, server.port));
         if (serverToUse == null) {
             throw "failed to find any server to use";
         }
-        console.log("chose server: ", serverToUse);
+        logger.info("chose server: ", serverToUse);
 
         writeConfigurationFile(serverToUse);
 
         runClash();
-        console.log("clash is running, waiting 5 seconds until configuration");
+        logger.info("clash is running, waiting 5 seconds until configuration");
 
         await sleep(1000 * 5);
 
         await configureClash(serverToUse);
-        console.log("clash is configured");
+        logger.info("clash is configured");
 
         await sleep(1000 * 2);
 
         doLoopRunning = false;
 
         if (!(await testActualConnectivity())) {
-            console.log("testActualConnectivity failed, do loop again");
+            logger.info("testActualConnectivity failed, do loop again");
             blacklistedServers[serverToUse.server] = true;
             await doLoop();
         }
@@ -86,10 +95,10 @@ const blacklistedServers = {};
             return;
         }
 
-        console.log("health checking server");
+        logger.info("health checking server");
 
         if (!testTCPConnectivity(serverToUse.server, serverToUse.port) || !(await testActualConnectivity())) {
-            console.log("serverToUse died, do loop again");
+            logger.info("serverToUse died, do loop again");
             blacklistedServers[serverToUse.server] = true;
             await doLoop();
         }
@@ -98,7 +107,7 @@ const blacklistedServers = {};
 
 
 async function testActualConnectivity() {
-    console.log("performing actual connectivity check through proxy");
+    logger.info("performing actual connectivity check through proxy");
 
     const proxyAgent = new HttpsProxyAgent("http://127.0.0.1:7890");
     const axiosInstance = axios.create({
@@ -110,11 +119,11 @@ async function testActualConnectivity() {
         const url = process.env["CONNECTIVITY_CHECK_TARGET_URL"] || "https://www.google.com";
         const response = await axiosInstance.get(url);
         if (response.status >= 200) {
-            console.log("testActualConnectivity is good");
+            logger.info("testActualConnectivity is good");
             return true;
         }
     } catch (e) {
-        console.log("testActualConnectivity failed", e);
+        logger.info("testActualConnectivity failed", e);
         return false;
     }
     return false;
