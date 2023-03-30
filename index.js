@@ -11,6 +11,9 @@ import {
     writeConfigurationFile
 } from "./utils.js";
 import pino from 'pino';
+import express from "express";
+
+const app = express();
 
 const logger = pino({
     transport: {
@@ -33,6 +36,12 @@ axios.defaults.validateStatus = function () {
 const blacklistedServers = {};
 
 (async function main() {
+
+    app.listen(8080, "0.0.0.0", () => {
+        console.log("listening on 8080");
+    });
+
+
     let serverToUse = null;
     let doLoopRunning = false;
     const doLoop = async () => {
@@ -87,6 +96,15 @@ const blacklistedServers = {};
         }
     };
 
+    app.post("/changeServer",
+        function (req, res) {
+            logger.info("/changeServer called");
+            doLoop();
+            res.status(200);
+            res.end("");
+        });
+
+    logger.info("doing first loop");
     await doLoop();
 
     // if serverToUse dies, doLoop again
