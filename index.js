@@ -3,7 +3,7 @@ import {
     cleanUp,
     configureClash,
     decodeBase64,
-    ensureDirectoryAndMmdb,
+    ensureDirectoryAndMmdb, logger,
     parseServer,
     runClash,
     sleep,
@@ -15,11 +15,6 @@ import express from "express";
 
 const app = express();
 
-const logger = pino({
-    transport: {
-        target: 'pino-pretty'
-    },
-})
 
 import HttpsProxyAgent from "https-proxy-agent";
 
@@ -73,7 +68,7 @@ const blacklistedServers = {};
         if (serverToUse == null) {
             throw "failed to find any server to use";
         }
-        logger.info("chose server: ", serverToUse);
+        logger.info("chose server: " + JSON.stringify(serverToUse));
 
         writeConfigurationFile(serverToUse);
 
@@ -146,3 +141,4 @@ async function testActualConnectivity() {
     }
     return false;
 }
+

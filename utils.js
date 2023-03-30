@@ -4,6 +4,13 @@ import dedent from "dedent";
 import fs from "fs";
 import axios from "axios";
 import base64url from "base64url";
+import pino from "pino";
+
+const logger = pino({
+    transport: {
+        target: 'pino-pretty'
+    },
+})
 
 export function sha1sum(text) {
     const shasum = crypto.createHash('sha1');
@@ -31,7 +38,7 @@ function killProcessByName(processName) {
         });
     } catch (e) {
         if (e.stdout || e.stderr) {
-            console.warn("killProcessByName failed with", e.stdout, e.stderr)
+            logger.error(`killProcessByName failed with ${e.stdout} ${e.stderr}`)
         }
     }
 }
@@ -47,7 +54,7 @@ export function sleep(ms) {
 }
 
 export function testTCPConnectivity(host, port) {
-    console.log("testTCPConnectivity", host, port);
+    logger.info("testTCPConnectivity", host, port);
     try {
         execFileSync("nc", ["-z", host, port], {
             encoding: "utf8",
@@ -201,8 +208,9 @@ export async function configureClash(server) {
     });
 
     if (+(resp.status / 100).toFixed(0) !== 2) {
-        console.log("configureClash failed with", resp.status, resp.data);
+        logger.error(`configureClash failed with ${resp.status} ${resp.data}`);
         process.exit(1);
     }
 }
 
+export {logger};
