@@ -93,8 +93,13 @@ function parseSSRServer(addr) {
 }
 
 function parseSSServer(addr) {
+    let isPremiumServer = false;
     if (addr.indexOf("#") >= 0) {
+        let hashContent = decodeURIComponent(addr.substring(addr.indexOf("#") + 1));
         addr = addr.substring(0, addr.indexOf("#"));
+        if (hashContent.indexOf("[Premium]") >= 0) {
+            isPremiumServer = true;
+        }
     }
 
     const segments = addr.substring(5).split("/?");
@@ -117,7 +122,8 @@ function parseSSServer(addr) {
         password,
         method,
         params,
-        type: "ss"
+        type: "ss",
+        isPremiumServer
     };
 
     ret['proxyName'] = sha1sum(JSON.stringify(ret));

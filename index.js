@@ -63,7 +63,14 @@ const blacklistedServers = {};
 
         logger.info("parsing servers");
         const servers = serversData.map(parseServer).filter(x => x);
-        servers.sort(() => Math.random() - 0.5);
+        servers.sort((a, b) => {
+            if (a.isPremiumServer && !b.isPremiumServer) {
+                return -1;
+            } else if (!a.isPremiumServer && b.isPremiumServer) {
+                return 1;
+            }
+            return Math.random() - 0.5;
+        });
         serverToUse = servers.find(server => !blacklistedServers[server.server] && testTCPConnectivity(server.server, server.port));
         if (serverToUse == null) {
             throw "failed to find any server to use";
