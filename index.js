@@ -30,6 +30,13 @@ axios.defaults.validateStatus = function () {
 
 const blacklistedServers = {};
 
+function blacklistServer(serverToUse) {
+    blacklistedServers[serverToUse.server] = true;
+    setTimeout(() => {
+        blacklistedServers[serverToUse.server] = false;
+    }, 1000 * 60 * 60);
+}
+
 (async function main() {
 
     app.listen(8080, "0.0.0.0", () => {
@@ -93,7 +100,7 @@ const blacklistedServers = {};
 
         if (!(await testActualConnectivity())) {
             logger.info("testActualConnectivity failed, do loop again");
-            blacklistedServers[serverToUse.server] = true;
+            blacklistServer(serverToUse);
             await doLoop();
         }
     };
@@ -119,7 +126,7 @@ const blacklistedServers = {};
 
         if (!testTCPConnectivity(serverToUse.server, serverToUse.port) || !(await testActualConnectivity())) {
             logger.info("serverToUse died, do loop again");
-            blacklistedServers[serverToUse.server] = true;
+            blacklistServer(serverToUse);
             await doLoop();
         }
     }, 3 * 60 * 1000)
