@@ -31,9 +31,10 @@ axios.defaults.validateStatus = function () {
 const blacklistedServers = {};
 
 function blacklistServer(serverToUse) {
-    blacklistedServers[serverToUse.server] = true;
+    let key = serverToUse.server + ":" + serverToUse.port;
+    blacklistedServers[key] = true;
     setTimeout(() => {
-        blacklistedServers[serverToUse.server] = false;
+        blacklistedServers[key] = false;
     }, 1000 * 60 * 60);
 }
 
