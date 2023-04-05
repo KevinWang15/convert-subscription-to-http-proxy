@@ -81,7 +81,9 @@ function blacklistServer(serverToUse) {
         });
         serverToUse = servers.find(server => !blacklistedServers[server.server] && testTCPConnectivity(server.server, server.port));
         if (serverToUse == null) {
-            throw "failed to find any server to use";
+            console.error("failed to find any server to use");
+            process.exit(-1);
+            return;
         }
         logger.info("chose server: " + JSON.stringify(serverToUse));
 
