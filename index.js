@@ -63,7 +63,13 @@ function blacklistServer(serverToUse) {
         logger.info("starting a new loop");
 
         let axiosResponse = await axios.get(SUB_URL);
-        const serversData = decodeBase64(axiosResponse.data).split("\n").filter(x => x && x.trim());
+        const serversData = (() => {
+            if (isBase64(axiosResponse.data)) {
+                return decodeBase64(axiosResponse.data)
+            } else {
+                return axiosResponse.data;
+            }
+        })().split("\n").filter(x => x && x.trim());
 
         cleanUp();
 
@@ -159,3 +165,11 @@ async function testActualConnectivity() {
     return false;
 }
 
+function isBase64(str) {
+    // The regular expression is used to detect base64 strings.
+    // The base64 string can only contain: A-Z, a-z, 0-9, +, /, = and white spaces
+    // The = sign is optional and can appear 0, 1 or 2 times at the end of the string
+    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
+
+    return base64Regex.test(str.trim());
+}
