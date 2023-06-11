@@ -169,7 +169,7 @@ function isBase64(str) {
     // The regular expression is used to detect base64 strings.
     // The base64 string can only contain: A-Z, a-z, 0-9, +, /, = and white spaces
     // The = sign is optional and can appear 0, 1 or 2 times at the end of the string
-    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
+    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{3,4})$/;
 
     return base64Regex.test(str.trim());
 }
