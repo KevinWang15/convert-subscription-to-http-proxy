@@ -214,7 +214,7 @@ export async function configureClash(server) {
     });
 
     if (+(resp.status / 100).toFixed(0) !== 2) {
-        logger.error(`configureClash failed with ${resp.status} ${resp.data}`);
+        logger.error(`configureClash failed with ${resp.status} ${JSON.stringify(resp.data)}`);
         process.exit(1);
     }
 }

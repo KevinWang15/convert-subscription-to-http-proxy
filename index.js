@@ -3,20 +3,21 @@ import {
     cleanUp,
     configureClash,
     decodeBase64,
-    ensureDirectoryAndMmdb, logger,
+    ensureDirectoryAndMmdb,
+    logger,
     parseServer,
     runClash,
     sleep,
     testTCPConnectivity,
     writeConfigurationFile
 } from "./utils.js";
-import pino from 'pino';
 import express from "express";
+import {HttpsProxyAgent} from "https-proxy-agent";
 
 const app = express();
 
 
-import HttpsProxyAgent from "https-proxy-agent";
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 
 axios.defaults.validateStatus = function () {
     return true;
@@ -36,6 +37,14 @@ function blacklistServer(serverToUse) {
     setTimeout(() => {
         blacklistedServers[key] = false;
     }, 1000 * 60 * 60);
+}
+
+function getHttpsAgentToUse() {
+    const subscriptionDownloadProxy = process.env.SUBSCRIPTION_DOWNLOAD_PROXY;
+    if (!subscriptionDownloadProxy) {
+        return null;
+    }
+    return new HttpsProxyAgent(subscriptionDownloadProxy);
 }
 
 (async function main() {
@@ -62,7 +71,10 @@ function blacklistServer(serverToUse) {
 
         logger.info("starting a new loop");
 
-        let axiosResponse = await axios.get(SUB_URL);
+        let axiosResponse = await axios.get(SUB_URL, {
+            httpsAgent: getHttpsAgentToUse(),
+            maxRedirects: 100,
+        });
         const serversData = (() => {
             if (isBase64(axiosResponse.data)) {
                 return decodeBase64(axiosResponse.data)
@@ -166,10 +178,7 @@ async function testActualConnectivity() {
 }
 
 function isBase64(str) {
-    // The regular expression is used to detect base64 strings.
-    // The base64 string can only contain: A-Z, a-z, 0-9, +, /, = and white spaces
-    // The = sign is optional and can appear 0, 1 or 2 times at the end of the string
-    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{3,4})$/;
+    const base64Regex = /^[A-Za-z0-9+/=]+$/;
 
     return base64Regex.test(str.trim());
 }
