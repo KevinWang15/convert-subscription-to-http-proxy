@@ -146,6 +146,7 @@ export function buildConfigurationYamlFromServer(server) {
     if (server.type === 'ssr') {
         return dedent(`
     port: 7890
+    socks-port: 7891
     mode: global
     allow-lan: true
     external-controller: 127.0.0.1:9090
@@ -163,6 +164,7 @@ export function buildConfigurationYamlFromServer(server) {
     } else if (server.type === 'ss') {
         return dedent(`
     port: 7890
+    socks-port: 7891
     mode: global
     allow-lan: true
     external-controller: 127.0.0.1:9090
