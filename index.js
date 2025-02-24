@@ -105,9 +105,9 @@ function getHttpsAgentToUse() {
         writeConfigurationFile(serverToUse);
 
         runClash();
-        logger.info("clash is running, waiting 5 seconds until configuration");
+        logger.info("clash is running, waiting 10 seconds until configuration");
 
-        await sleep(1000 * 5);
+        await sleep(1000 * 10);
 
         await configureClash(serverToUse);
         logger.info("clash is configured");
