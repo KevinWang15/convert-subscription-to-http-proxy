@@ -1,6 +1,5 @@
 import axios from "axios";
 import {
-    cleanUp,
     configureClash,
     decodeBase64,
     ensureDirectoryAndMmdb,
@@ -36,7 +35,7 @@ function blacklistServer(serverToUse) {
     blacklistedServers[key] = true;
     setTimeout(() => {
         blacklistedServers[key] = false;
-    }, 1000 * 60 * 60);
+    }, 1000 * 60 * 60 * 5);
 }
 
 function getHttpsAgentToUse() {
@@ -83,8 +82,6 @@ function getHttpsAgentToUse() {
             }
         })().split("\n").filter(x => x && x.trim());
 
-        cleanUp();
-
         ensureDirectoryAndMmdb();
 
         logger.info("parsing servers");
@@ -97,7 +94,7 @@ function getHttpsAgentToUse() {
             }
             return Math.random() - 0.5;
         });
-        serverToUse = servers.find(server => !blacklistedServers[server.server] && testTCPConnectivity(server.server, server.port));
+        serverToUse = servers.find(server => !blacklistedServers[server.server + ":" + server.port] && testTCPConnectivity(server.server, server.port));
         if (serverToUse == null) {
             console.error("failed to find any server to use");
             process.exit(-1);
@@ -137,7 +134,7 @@ function getHttpsAgentToUse() {
     logger.info("doing first loop");
     await doLoop();
 
-    // if serverToUse dies, doLoop again
+    // if serverToUse dies, doLoop again with multiple attempts before marking it dead
     setInterval(async () => {
         if (serverToUse == null) {
             return;
@@ -145,12 +142,29 @@ function getHttpsAgentToUse() {
 
         logger.info("health checking server");
 
-        if (!testTCPConnectivity(serverToUse.server, serverToUse.port) || !(await testActualConnectivity())) {
-            logger.info("serverToUse died, do loop again");
+        const maxAttempts = 3;
+        let connectivityOK = false;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            logger.info(`Health check attempt ${attempt + 1}`);
+
+            if (testTCPConnectivity(serverToUse.server, serverToUse.port) && (await testActualConnectivity())) {
+                connectivityOK = true;
+                break;
+            }
+
+            if (attempt < maxAttempts - 1) {
+                logger.info("Connectivity check failed, waiting before retry...");
+                await sleep(5000); // delay of 5 seconds between attempts
+            }
+        }
+
+        if (!connectivityOK) {
+            logger.info("serverToUse failed connectivity after multiple attempts, marking as dead and triggering doLoop");
             blacklistServer(serverToUse);
             await doLoop();
         }
-    }, 3 * 60 * 1000)
+    }, 3 * 60 * 1000);
 })()
 
 

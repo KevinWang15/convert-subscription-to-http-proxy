@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import {exec, execFileSync, execSync} from "child_process";
+import {execFileSync, spawn} from "child_process";
 import dedent from "dedent";
 import fs from "fs";
 import axios from "axios";
@@ -29,22 +29,6 @@ export function decodeFormUrlEncoded(encoded) {
 
 export function decodeBase64(str) {
     return Buffer.from(str, 'base64').toString('utf8');
-}
-
-function killProcessByName(processName) {
-    try {
-        execSync(`/usr/bin/pkill -9 ${processName}`, {
-            encoding: "utf8"
-        });
-    } catch (e) {
-        if (e.stdout || e.stderr) {
-            logger.error(`killProcessByName failed with ${e.stdout} ${e.stderr}`)
-        }
-    }
-}
-
-export function cleanUp() {
-    killProcessByName("clash")
 }
 
 export function sleep(ms) {
@@ -199,11 +183,23 @@ export function writeConfigurationFile(server) {
     fs.writeFileSync("/root/.config/clash/config.yaml", buildConfigurationYamlFromServer(server))
 }
 
+let clashProcess = null;
+
 export function runClash() {
-    let command = "clash -d /root/.config/clash";
-    // exec command and pipe stdout and stderr to this process
-    exec(command, {
-        stdio: 'inherit'
+    // If an existing process is running, kill it before starting a new one
+    if (clashProcess) {
+        clashProcess.kill();
+    }
+
+    // Spawn the new clash process
+    clashProcess = spawn("clash", ["-d", "/root/.config/clash"], {
+        stdio: "inherit",
+    });
+
+    // Handle process exit to avoid zombies
+    clashProcess.on("exit", (code, signal) => {
+        console.log(`Clash process exited with code ${code}, signal ${signal}`);
+        clashProcess = null; // clear the reference
     });
 }
 
