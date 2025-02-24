@@ -188,6 +188,7 @@ let clashProcess = null;
 export function runClash() {
     // If an existing process is running, kill it before starting a new one
     if (clashProcess) {
+        logger.info("killing the last clash");
         clashProcess.kill();
     }
 
